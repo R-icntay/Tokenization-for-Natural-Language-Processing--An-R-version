@@ -1,0 +1,211 @@
+---
+title: ' '
+output:
+  html_document:
+    css: style_3.css
+    df_print: paged
+    theme: cosmo
+    highlight: breezedark
+    toc: yes
+    toc_float: yes
+    code_download: TRUE
+    includes:
+      after_body: footer.html
+  html_notebook:
+    toc: yes
+---
+# **Tokenization for Natural Language Processing:** An R version
+
+Hello! Welcome to the eighth **R** code walkthrough of the session ***Machine Learning Foundations*** where [Laurence Moroney](https://www.linkedin.com/in/laurence-moroney),a Developer Advocate at Google working on Artificial Intelligence, takes us through the fundamentals of building machine learned models using TensorFlow.
+
+In this episode, [Episode 8](https://www.youtube.com/watch?v=f5YJA5mQD5c),  we switch gears from computer vision and take a look at Natural Language Processing (NLP), beginning with `tokenization` --how a computer can represent language in a numeric format that can be used in training neural networks.
+
+Like the previous [R Notebooks](rpubs.eR_ic), this Notebook tries to replicate the [Python Notebook](https://colab.research.google.com/github/lmoroney/dlaicourse/blob/master/TensorFlow%20In%20Practice/Course%203%20-%20NLP/Course%203%20-%20Week%201%20-%20Lesson%201.ipynb) used for this episode.
+
+Before we begin, I highly recommend that you go through [Episode 8](https://www.youtube.com/watch?v=f5YJA5mQD5c) first then you can come back and implement these concepts in R. I will try and highlight some of the concepts said and add some of my own for the sake of completeness of this post but be sure to check the session out on YouTube.
+
+<br>
+
+Let's start by loading the libraries required for this session.
+
+We'll be requiring some packages in the Tidyverse and Keras(a framework for defining a neural network as a set of Sequential layers). You can have them installed as follows:
+
+For the [Tidyverse](https://www.tidyverse.org/), install the complete tidyverse with:
+```
+suppressMessages(install.packages("tidyverse"))
+```
+<br>
+
+The Keras R interface uses the TensorFlow backend engine by default. An elegant doucumentation for the installation of both the core Keras library as well as the TensorFlow backend can be found on the [R interface to Keras](https://keras.rstudio.com/reference/install_keras.html) website.
+
+<br>
+
+# **Let's start at the beginning:** Deep Learning for NLP
+
+Text is one of the most widespread forms of sequence data which can be understood as either a sequence of characters or words.
+
+Up to now, we've been looking at applications of deep learning in computer vision. We've gone from classifying raw pixel values, to using CNNs for feature extraction and finally wrapping it up with Image Augmentation to minimize overfitting.
+
+Deep Learning for NLP can be considered as `pattern recognition applied to words, sentences and paragraphs`, in much the same way that computer vision is `pattern recognition applied to pixels.`
+
+Like all other neural networks, deep-learning models for NLP won't be taking `raw text` as input, we'll have to represent language in a numeric format.
+
+This brings us to `tokenization`.
+
+<br>
+
+# **Working with text data:** Tokenization
+
+`Tokenization` is a technique used to represent text data into a numeric format that can then be used to train a neural network.
+
+It involves breaking down text into smaller units known as tokens (words, characters, n-grams) and then associating them with a unique integer index.
+
+<br>
+
+### **Character tokenization**
+
+Character tokenization involves splitting a piece of text into a set of characters. For illustration, let's take an example right from the episode.
+
+Consider the English word `LISTEN`. Character tokenization would require that each letter be assigned a number. One way to achieve this would be to use [ASCII](https://en.wikipedia.org/wiki/ASCII) encoding as shown:
+
+
+```{r, echo=FALSE, fig.cap= "**Image source: Machine Learning Foundations Ep #8 - Tokenization for Natural Language Processing**"}
+
+suppressPackageStartupMessages({
+library(knitr)
+library(EBImage)
+library(dplyr)
+library(keras)
+})
+
+
+img_files <- list.files(path = "C:/Users/keras/OneDrive - Microsoft Student Partners/Ep_8/resources", full.names = TRUE )
+readImage(img_files[1]) %>% display(method = 'raster')
+```
+<br>
+
+The raw text is thus converted into numbers, which is an amenable form that can be understood by computers and fed into a neural network.
+
+Character tokenization usually has a catch though: it often requires a sequence model. Consider the English word `SILENT` which has the same letters as LISTEN but a different meaning nonetheless.
+
+
+```{r, echo=FALSE, fig.cap= "**Image source: Machine Learning Foundations Ep #8 - Tokenization for Natural Language Processing**"}
+
+
+readImage(img_files[2]) %>% display(method = 'raster')
+```
+
+<br>
+For a computer to differentiate these two words, we have to take into account the sequence of the ASCII values of the individual words, using a sequence model.
+
+For such reasons, We'll now take a look at the general norm that is followed by the industry: `word tokenization`.
+
+
+### **Word tokenization**
+
+Word tokenization involves splitting a piece of text into individual words with each unique word being assigned a number.
+
+Consider the sentence, `I Love my dog`. If we are to use word tokenization, we would end up assigning a unique integer index to each unique word, say, `1` to `I`, `2` to `Love`, `3` to `my` and `4` to `dog`.
+
+
+```{r, echo=FALSE, fig.cap= "**Image source: Machine Learning Foundations Ep #8 - Tokenization for Natural Language Processing**"}
+
+
+readImage(img_files[3]) %>% display(method = 'raster')
+```
+
+If we were to encode another sentence, say, `I Love my cat`, the words `I Love my`, already have numbers `001 002 003`, so all we have to do is to create a new number for `cat` say `005`.
+
+
+```{r, echo=FALSE, fig.cap= "**Image source: Machine Learning Foundations Ep #8 - Tokenization for Natural Language Processing**"}
+
+
+readImage(img_files[4]) %>% display(method = 'raster')
+```
+
+If we take a look at the tokens of the two sentences:
+
+`001 002 003 004`
+
+`001 002 003 005`
+
+we can see a kind of similarity between the sentences. It is noteworthy that Machine learning models do not truly understand text in a human sense. Using tokenization, we are able to transform text from a `human-understandable form` to a statistical pattern that can be mapped by a machine learning model.
+
+
+# **Tokenization:** In action
+
+Time to implement these concepts in R code.🤩
+
+I couldn't help but use some of my favorite quotes from the book `What I talk about when I talk about running` by `Haruki Murakami`. 🏃🏃
+
+
+```{r}
+library(keras)
+library(dplyr)
+
+# creating a text corpus
+sentences <- c(
+  "I just run",
+  "I run in void",
+  "I run in order to acquire a Void!",
+  "I run, therefore, i am"
+)
+
+# creating a tokenizer that takes into account the 100
+# most common words and fitting this instance to our corpus
+tokenizer <- text_tokenizer(num_words = 100) %>%
+  #building the word index
+  fit_text_tokenizer(sentences)
+
+# named list mapping words to their rank/index 
+word_index <- tokenizer$word_index
+print(t(word_index))
+
+cat("Found", length(word_index), "unique tokens\n")
+
+             
+```
+
+
+There are some interesting things to note based on the output of the word-index mapping:
+
+* Only the most common `num_words` will be kept.This helps us to avoid dealing with very large input vector spaces.
+
+* The most common words will be lowest indexed. In this scenario, the word  `i` is the most common with five instances hence indexed as `1`, `run` is repeated four times hence indexed as `2`, `in` and `void` follow with two instances hence indexed `3` and `4` respectively, and the rest of the words have one instance each.
+
+* By default, the tokenizer converts texts into lower case. For this reason, `I` and `i`, `void` and `Void` will be treated as the same word.
+
+* By default, all punctuation is removed.
+
+<br>
+
+
+Time to wrap up the adventure...for now ⏲. 
+
+We just took our first steps into Natural Language Processing with `tokenization` where we broke down text into tokens. 
+
+Our next stop towards building a text classifier will be replacing our sentences with a sequence of integers. Things couldn't get more exciting than this!! 😊
+
+Till then, 
+
+Happy Learning 👩🏽‍💻 👨‍💻 👨🏾‍💻 👩‍💻 ,
+
+Eric (R_ic), Microsoft Learn Student Ambassador.
+
+
+# **Reference Material**
+
+* Machine Learning Foundations: Ep #8 - [Tokenization for Natural Language Processing](https://www.youtube.com/watch?v=f5YJA5mQD5c)
+
+* Deep Learning with R by Francois Chollet and J.J.Allaire
+
+* The [R interface to Keras](https://tensorflow.rstudio.com/learn/resources/) website.
+
+* The [Keras API Reference](https://keras.io/api/preprocessing/text/) website
+
+* [Lab 8](https://colab.research.google.com/github/lmoroney/dlaicourse/blob/master/TensorFlow%20In%20Practice/Course%203%20-%20NLP/Course%203%20-%20Week%201%20-%20Lesson%201.ipynb)
+
+* Google developers Machine Learning guides: [Text classification](https://developers.google.com/machine-learning/guides/text-classification/step-3)
+
+
+
